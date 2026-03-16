@@ -4,11 +4,14 @@ Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart /
 
 ## Umgesetzte Basisfunktionen
 
-  - **Layer**: Kategorisierte Layerauswahl mit mindestens 2 Ebenen (Kategorie → Gruppe → Layer), inkl. Name, Kurzbeschreibung und Typ
-  - **Layouts**: Auswahl von Layouts mit Name und Beschreibung (Dateipfad wird im UI nicht angezeigt)
-  - Gewählte `.qpt`-Layouts werden in den QGIS-Layout-Manager importiert (bestehende Layouts mit gleichem Namen werden ersetzt)
-  - **Einstellungen**: Plugin-Konfiguration und Benutzer-Stammdaten
-    
+### Kategorien
+
+- **Layer**: Kategorisierte Layerauswahl mit mindestens 2 Ebenen (Kategorie → Gruppe → Layer), inkl. Name, Kurzbeschreibung und Typ
+- **Layouts**: Auswahl von Layouts mit Name und Beschreibung. Gewählte `.qpt`-Layouts werden in den QGIS-Layout-Manager importiert
+- **Einstellungen**: Plugin-Konfiguration und Benutzer-Stammdaten
+
+### Funktionen
+
 - JSON-basierter Layer-/Layout-Katalog (`default_catalog.json`)
 - Katalog-Reader normalisiert und validiert Katalogdaten (inkl. einfacher Rückwärtskompatibilität für ältere JSON-Strukturen)
 - Server-Settings in `settings.json` (vom Anwender separat ladbar, z. B. mit verschlüsseltem Inhalt)
