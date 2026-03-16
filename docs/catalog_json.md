@@ -273,7 +273,8 @@ Serverbezogene Pfade werden in `bo_projektstart/settings.json` gepflegt, z. B. S
 Diese Datei kann im Plugin über den Button **"Settings.json laden"** aktualisiert werden.
 
 Lokale Benutzer-/Systemdaten (Cache-Pfad und Stammdaten) werden separat in `bo_projektstart/user_profile.json` gespeichert.
-
+Mit dem `settings_codec_helper.html` Skript können die Informationen der Settings.json noch mittels Base64 und XOR unleserlich gemacht werden.
+Dies ist keine Verschlüsselung!
 
 ## 11) Stammdaten als Projekt-/Layout-Variablen
 
