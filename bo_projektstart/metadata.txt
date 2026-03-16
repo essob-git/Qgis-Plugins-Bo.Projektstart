@@ -1,0 +1,11 @@
+[general]
+name=Bo-Projektstart
+qgisMinimumVersion=3.0
+qgisMaximumVersion=3.99
+description=Proektstart
+version=0.1.0
+author=Sven Bosse
+email=essob-git@outlook.com
+icon=icon.png
+about=Das Plugin ist noch in der Entwicklung
+tags=PostGIS, Layerverwaltung

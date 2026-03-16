@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bo-Projektstart Settings-Codec</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; line-height: 1.4; }
+    h1 { margin-top: 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    textarea { width: 100%; min-height: 260px; font-family: ui-monospace, monospace; }
+    .row { margin: 12px 0; }
+    button { margin-right: 8px; padding: 8px 12px; }
+    .hint { color: #555; font-size: 0.95rem; }
+    code { background: #f2f2f2; padding: 2px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Bo-Projektstart: settings.json codieren/decodieren</h1>
+  <p class="hint">
+    Diese Hilfsseite erzeugt den verschlüsselten Settings-Payload für das Plugin und kann ihn wieder lesen.
+    Die Verschlüsselung ist absichtlich einfach (XOR + Base64) und dient als leichte Hürde gegen Klartext.
+  </p>
+
+  <div class="row">
+    <button id="encodeBtn">JSON → Verschlüsselt</button>
+    <button id="decodeBtn">Verschlüsselt → JSON</button>
+    <button id="clearBtn">Leeren</button>
+    <button id="downloadBtn">Als settings.json speichern</button>
+  </div>
+
+  <div class="grid">
+    <div>
+      <h3>Input</h3>
+      <textarea id="input" spellcheck="false" placeholder='{"server_catalog_candidates":["W:/Karten/1234/catalog.json"],"default_cache_dir":"C:/Temp/Cache"}'></textarea>
+    </div>
+    <div>
+      <h3>Output</h3>
+      <textarea id="output" spellcheck="false" placeholder='{"encrypted_settings":"..."}'></textarea>
+    </div>
+  </div>
+
+  <p class="hint">Schlüssel: <code>BoProjektstartSettingsV1</code> (muss mit Plugin-Code übereinstimmen).</p>
+
+  <script>
+    const KEY = "BoProjektstartSettingsV1";
+
+    function xorBytes(inputBytes, key) {
+      const out = new Uint8Array(inputBytes.length);
+      for (let i = 0; i < inputBytes.length; i += 1) {
+        out[i] = inputBytes[i] ^ key.charCodeAt(i % key.length);
+      }
+      return out;
+    }
+
+    function bytesToBase64(bytes) {
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 1) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    function base64ToBytes(base64) {
+      const binary = atob(base64);
+      const out = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        out[i] = binary.charCodeAt(i);
+      }
+      return out;
+    }
+
+    function encodeSettings() {
+      const input = document.getElementById("input").value.trim();
+      if (!input) {
+        alert("Bitte zuerst ein JSON eingeben.");
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(input);
+      } catch (err) {
+        alert("Input ist kein gültiges JSON.");
+        return;
+      }
+
+      if (!Array.isArray(parsed.server_catalog_candidates)) {
+        alert("JSON muss mindestens 'server_catalog_candidates' als Liste enthalten.");
+        return;
+      }
+
+      const normalized = JSON.stringify(parsed);
+      const sourceBytes = new TextEncoder().encode(normalized);
+      const encrypted = xorBytes(sourceBytes, KEY);
+      const payload = {
+        encrypted_settings: bytesToBase64(encrypted)
+      };
+      document.getElementById("output").value = JSON.stringify(payload, null, 2);
+    }
+
+    function decodeSettings() {
+      const input = document.getElementById("input").value.trim();
+      if (!input) {
+        alert("Bitte zuerst den verschlüsselten Input einfügen.");
+        return;
+      }
+
+      let blob = input;
+      try {
+        const maybeJson = JSON.parse(input);
+        if (maybeJson && typeof maybeJson.encrypted_settings === "string") {
+          blob = maybeJson.encrypted_settings;
+        }
+      } catch (_) {
+        // Input kann auch direkt der Base64-Blob sein
+      }
+
+      try {
+        const encryptedBytes = base64ToBytes(blob);
+        const decryptedBytes = xorBytes(encryptedBytes, KEY);
+        const text = new TextDecoder().decode(decryptedBytes);
+        const parsed = JSON.parse(text);
+        document.getElementById("output").value = JSON.stringify(parsed, null, 2);
+      } catch (err) {
+        alert("Decodieren fehlgeschlagen. Bitte Input prüfen.");
+      }
+    }
+
+    function clearAll() {
+      document.getElementById("input").value = "";
+      document.getElementById("output").value = "";
+    }
+
+    function downloadOutput() {
+      const content = document.getElementById("output").value.trim();
+      if (!content) {
+        alert("Kein Output zum Speichern vorhanden.");
+        return;
+      }
+      const blob = new Blob([content], { type: "application/json;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "settings.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    }
+
+    document.getElementById("encodeBtn").addEventListener("click", encodeSettings);
+    document.getElementById("decodeBtn").addEventListener("click", decodeSettings);
+    document.getElementById("clearBtn").addEventListener("click", clearAll);
+    document.getElementById("downloadBtn").addEventListener("click", downloadOutput);
+  </script>
+</body>
+</html>
