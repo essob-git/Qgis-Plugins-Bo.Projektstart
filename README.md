@@ -4,7 +4,6 @@ Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart /
 
 ## Umgesetzte Basisfunktionen
 
-- Plugin-Dialog mit 4 Reitern:
   - **Layer**: Kategorisierte Layerauswahl mit mindestens 2 Ebenen (Kategorie → Gruppe → Layer), inkl. Name, Kurzbeschreibung und Typ
   - **Layouts**: Auswahl von Layouts mit Name und Beschreibung (Dateipfad wird im UI nicht angezeigt)
   - Gewählte `.qpt`-Layouts werden in den QGIS-Layout-Manager importiert (bestehende Layouts mit gleichem Namen werden ersetzt)
