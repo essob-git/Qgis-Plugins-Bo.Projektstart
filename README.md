@@ -2,7 +2,7 @@
 
 Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart / Musterprojekt-Erstellung**.
 
-## Umgesetzte Basisfunktionen
+## Überblick
 
 ### Kategorien
 
