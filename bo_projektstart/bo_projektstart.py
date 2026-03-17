@@ -1035,6 +1035,9 @@ class BoProjektstartPlugin:
         for category in self.catalog.get("layer_categories", []):
             for subgroup in category.get("groups", []):
                 for layer in subgroup.get("layers", []):
+                    if layer.get("allow_offline_copy") is False:
+                        skipped += 1
+                        continue
                     if layer.get("source_type") in {"wms", "wfs", "xyz"}:
                         skipped += 1
                         continue
