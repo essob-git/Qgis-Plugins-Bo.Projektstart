@@ -859,6 +859,8 @@ class BoProjektstartPlugin:
 
         if source_type in {"wms", "xyz", "tiles"}:
             return QgsRasterLayer(source, name, "wms")
+        if source_type == "mbtiles":
+            return QgsRasterLayer(source, name, "gdal")
         if source_type == "wfs":
             return QgsVectorLayer(source, name, "WFS")
         if source_type in {"postgres", "postgis", "postgresql"}:
