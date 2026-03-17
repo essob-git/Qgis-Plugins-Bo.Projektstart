@@ -29,6 +29,7 @@ Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart /
 - Offline-Funktion:
   - Kopiert **nur dateibasierte Quellen** (z. B. SHP/GPKG) in einen Cache
   - Überspringt Webdienste (WMS/WFS/XYZ)
+- Optional kann je Layer `"allow_offline_copy": false` gesetzt werden, um das Kopieren gezielt zu verhindern
 
 ## Katalog-Update über Plugin
 
