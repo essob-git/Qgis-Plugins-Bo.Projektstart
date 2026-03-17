@@ -56,12 +56,20 @@ Optional für Styling:
 
 - `qml` *(String Pfad)* oder
 - `style_qml` *(String Pfad)*
+- `qml_styles` *(Array, optional)*: Zusätzliche auswählbare Styles für das Dropdown im Layer-Tree.
+  - als String: `"qml_styles": ["styles/hell.qml", "styles/dunkel.qml"]`
+  - oder als Objekt mit Label: `"qml_styles": [{"label": "Hell", "qml": "styles/hell.qml"}]`
 
 Optional für Offline-Export:
 
 - `allow_offline_copy` *(Boolean, Standard: `true`)* – Wenn `false`, wird der Layer beim Button **Offline-Paket erzeugen** bewusst nicht kopiert.
 
 Wenn kein `qml/style_qml` gesetzt ist, versucht das Plugin automatisch eine gleichnamige `.qml` zur Layerquelle.
+
+Im Plugin-Dropdown **Visualisierung** gilt:
+
+- `standard` = bisheriges Verhalten (Basis-Style über `qml/style_qml` oder automatische `.qml`-Suche)
+- Weitere Einträge aus `qml_styles` laden den jeweils gewählten QML-Style.
 
 ## 5) Layer-Typen (`source_type`)
 

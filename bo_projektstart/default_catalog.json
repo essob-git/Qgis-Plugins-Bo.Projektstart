@@ -14,6 +14,16 @@
               "source_type": "geopackage",
               "source": "W:/Karten/1234/projekt_a/layer_a.gpkg",
               "qml": "W:/Karten/1234/projekt_a/layer_a.qml",
+              "qml_styles": [
+                {
+                  "label": "Graustufen",
+                  "qml": "W:/Karten/1234/projekt_a/layer_a_grau.qml"
+                },
+                {
+                  "label": "Signatur",
+                  "qml": "W:/Karten/1234/projekt_a/layer_a_signatur.qml"
+                }
+              ],
               "description": "Layer A aus dem Katalog"
             },
             {

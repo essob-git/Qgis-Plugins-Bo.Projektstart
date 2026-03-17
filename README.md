@@ -22,6 +22,8 @@ Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart /
 - Nach dem Hinzufügen wird die Auswahl im Tree automatisch zurückgesetzt, um Doppelimporte zu vermeiden
 - Importierte Layer werden in Projektgruppen abgelegt (Gruppenname aus JSON-Definition)
 - Je Layer kann optional eine QML-Styledatei mitgeliefert werden (`qml` oder `style_qml` im Katalog)
+- Im Layer-Tree gibt es zusätzlich eine Spalte **Visualisierung** mit Dropdown; `standard` nutzt weiterhin die bisherige Basis-Logik
+- Zusätzlich können je Layer weitere QML-Styles über `qml_styles` im JSON gepflegt und im Dropdown ausgewählt werden
 - Virtuelle Layer (`source_type: "virtual"`) sind im Katalog möglich, inkl. SQL (`sql`) und Abhängigkeiten (`dependencies`)
 - PostgreSQL/PostGIS-Layer (`source_type: "postgres"`) werden unterstützt
 - SQLite/SpatiaLite-Layer (`source_type: "sqlite"` oder `"spatialite"`) werden unterstützt (auch SQLite-Tabellen ohne Geometrie)
