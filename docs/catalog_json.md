@@ -206,6 +206,26 @@ Empfehlungen:
 - `table` exakt wie in der DB benennen (Groß-/Kleinschreibung beachten).
 - Bei Fehlern zuerst prüfen: Datei erreichbar, Tabelle vorhanden, ggf. Geometriespalte korrekt benannt.
 
+## 5.5 MBTiles
+
+MBTiles-Raster können direkt eingebunden werden. Verwende dafür `source_type: "mbtiles"` und den Dateipfad als `source`:
+
+```json
+{
+  "id": "hintergrund_mbtiles",
+  "name": "Hintergrund (MBTiles)",
+  "description": "Lokaler Raster-Kachelhintergrund",
+  "version": "1.0.0",
+  "source_type": "mbtiles",
+  "source": "W:/Karten/1234/hintergrund.mbtiles"
+}
+```
+
+Hinweise:
+
+- MBTiles wird als Raster über den GDAL-Provider geladen.
+- Für Offline-Pakete ist MBTiles dateibasiert und wird daher mitkopiert (sofern die Datei erreichbar ist).
+
 ## 5.5 Virtuelle Layer
 
 ```json
