@@ -228,7 +228,7 @@ class PluginDialog(QDialog):
         outdated_keys = self.plugin.outdated_layer_keys
 
         for category in self.plugin.catalog.get("layer_categories", []):
-            category_item = QTreeWidgetItem([category.get("name", ""), "", "", ""])
+            category_item = QTreeWidgetItem([category.get("name", ""), "", "", "", ""])
             category_item.setFlags(category_item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
             category_font = QFont(category_item.font(0))
             category_font.setBold(True)
@@ -238,7 +238,7 @@ class PluginDialog(QDialog):
             self.layer_tree.addTopLevelItem(category_item)
 
             for subgroup in category.get("groups", []):
-                group_item = QTreeWidgetItem([subgroup.get("name", ""), "", "", ""])
+                group_item = QTreeWidgetItem([subgroup.get("name", ""), "", "", "", ""])
                 group_item.setFlags(group_item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
                 category_item.addChild(group_item)
 
@@ -246,9 +246,13 @@ class PluginDialog(QDialog):
                     layer_key = self.plugin.layer_key(layer)
                     is_outdated = layer_key in outdated_keys
                     status = tr("⚠ Server neuer") if is_outdated else tr("Aktuell")
-                    layer_item = QTreeWidgetItem(
-                        [layer.get("name", ""), layer.get("description", ""), layer.get("source_type", ""), status]
-                    )
+                    layer_item = QTreeWidgetItem([
+                        layer.get("name", ""),
+                        layer.get("description", ""),
+                        layer.get("source_type", ""),
+                        status,
+                        "",
+                    ])
                     layer_payload = dict(layer)
                     layer_payload["__group_name"] = subgroup.get("name", "")
                     layer_item.setData(0, Qt.UserRole, layer_payload)
@@ -259,12 +263,12 @@ class PluginDialog(QDialog):
                     style_combo.addItem(tr("standard"), "__standard__")
                     for style_option in self.plugin.collect_qml_style_options(layer):
                         style_combo.addItem(style_option["label"], style_option["qml"])
-                    self.layer_tree.setItemWidget(layer_item, 4, style_combo)
 
                     if is_outdated:
                         for col in range(5):
                             layer_item.setForeground(col, QColor("#b00020"))
                     group_item.addChild(layer_item)
+                    self.layer_tree.setItemWidget(layer_item, 4, style_combo)
 
         self.layer_tree.expandAll()
 
