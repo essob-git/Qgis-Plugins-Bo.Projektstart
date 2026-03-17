@@ -57,6 +57,10 @@ Optional für Styling:
 - `qml` *(String Pfad)* oder
 - `style_qml` *(String Pfad)*
 
+Optional für Offline-Export:
+
+- `allow_offline_copy` *(Boolean, Standard: `true`)* – Wenn `false`, wird der Layer beim Button **Offline-Paket erzeugen** bewusst nicht kopiert.
+
 Wenn kein `qml/style_qml` gesetzt ist, versucht das Plugin automatisch eine gleichnamige `.qml` zur Layerquelle.
 
 ## 5) Layer-Typen (`source_type`)
@@ -75,6 +79,12 @@ Wenn kein `qml/style_qml` gesetzt ist, versucht das Plugin automatisch eine glei
 ```
 
 Hinweis: `source_type` kann hier auch z. B. `geopackage` sein; geladen wird als OGR (mit Raster-Fallback).
+
+Wenn ein dateibasierter Layer **nicht** ins Offline-Paket übernommen werden darf, ergänze:
+
+```json
+"allow_offline_copy": false
+```
 
 ## 5.2 Webdienste (WMS/WFS/XYZ)
 
