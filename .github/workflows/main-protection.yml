@@ -1,0 +1,17 @@
+name: Main Branch Protection
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if source is dev
+        if: github.head_ref != 'dev'
+        run: |
+          echo "STOPP! Merges in 'main' sind NUR aus dem 'dev'-Branch erlaubt."
+          echo "Dein Quell-Branch war: ${{ github.head_ref }}"
+          exit 1
