@@ -115,9 +115,9 @@ class PluginDialog(QDialog):
         )
 
         self.layer_tree.setColumnWidth(0, 260)
-        self.layer_tree.setColumnWidth(1, 360)
-        self.layer_tree.setColumnWidth(2, 100)
-        self.layer_tree.setColumnWidth(3, 100)
+        self.layer_tree.setColumnWidth(1, 340)
+        self.layer_tree.setColumnWidth(2, 90)
+        self.layer_tree.setColumnWidth(3, 90)
         self.layer_tree.setColumnWidth(4, 180)
         layout.addWidget(self.layer_tree)
 
