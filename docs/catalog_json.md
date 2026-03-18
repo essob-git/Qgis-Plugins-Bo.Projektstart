@@ -2,6 +2,19 @@
 
 Diese Datei beschreibt, wie die Katalogdatei für das Plugin **Bo-Projektstart** gepflegt werden muss.
 
+## Einsatz mit mehreren Katalogdateien
+
+Das Plugin kann einen **globalen Katalog** und zusätzlich **optionale Themenkataloge** laden.
+Welche Kataloge ein Anwender sieht, wird in der benutzerspezifischen `settings.json` über
+`catalog_sources` gesteuert. Alle aktivierten Kataloge werden intern zu einem gemeinsamen
+Arbeitskatalog zusammengeführt.
+
+Wichtig:
+
+- Jeder Themenkatalog kann relativ zu seinem eigenen Ordner gepflegt werden.
+- Relative Pfade in `source`, `qml`, `style_qml` und Layout-`path` bleiben erhalten.
+- Kategorien und Gruppen aus verschiedenen Katalogen mit gleichem Namen werden zusammengeführt.
+
 ## 1) Grundstruktur
 
 ```json

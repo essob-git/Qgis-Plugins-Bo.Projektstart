@@ -1,3 +1,23 @@
 {
-
+  "catalog_sources": [
+    {
+      "id": "global",
+      "label": "Global",
+      "enabled": true,
+      "candidates": [
+        "W:/Karten/1234/catalog.json",
+        "\\\\vfgis\\Karten\\1234\\catalog.json"
+      ]
+    },
+    {
+      "id": "thema_bodenordnung",
+      "label": "Themenblock Bodenordnung",
+      "enabled": false,
+      "candidates": [
+        "W:/Karten/1234/themen/bodenordnung/catalog.json",
+        "\\\\vfgis\\Karten\\1234\\themen\\bodenordnung\\catalog.json"
+      ]
+    }
+  ],
+  "default_cache_dir": "~/QGISBoProjektstartCache"
 }
