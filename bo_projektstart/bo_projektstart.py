@@ -5,6 +5,8 @@ from __future__ import annotations
 import configparser
 import base64
 import json
+import os
+import re
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Set
@@ -434,7 +436,10 @@ class BoProjektstartPlugin:
         self.settings = self._read_json(self.user_profile_path) or {}
         self.server_settings = self._load_server_settings()
         self.server_catalog_candidates = [Path(p) for p in self.server_settings.get("server_catalog_candidates", [])]
-        self.default_cache_dir = str(self.server_settings.get("default_cache_dir", str(Path.home() / "QGISBoProjektstartCache")))
+        
+        self.default_cache_dir = self._resolve_cache_dir(
+            self.server_settings.get("default_cache_dir", str(Path.home() / "QGISBoProjektstartCache"))
+        )
         self.metadata = self._read_metadata()
 
     def initGui(self) -> None:
@@ -522,6 +527,27 @@ class BoProjektstartPlugin:
         with path.open("w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2, ensure_ascii=False)
 
+    def _expand_env_placeholders(self, value: str) -> str:
+        if not value:
+            return value
+
+        environment = dict(os.environ)
+        environment.update({key.upper(): val for key, val in os.environ.items()})
+        environment.update({key.lower(): val for key, val in os.environ.items()})
+
+        def replace_percent_token(match: re.Match[str]) -> str:
+            token = match.group(1)
+            return environment.get(token, environment.get(token.upper(), environment.get(token.lower(), match.group(0))))
+
+        expanded = re.sub(r"%([^%]+)%", replace_percent_token, value)
+        expanded = os.path.expandvars(expanded)
+        return os.path.expanduser(expanded)
+
+    def _resolve_cache_dir(self, value: object) -> str:
+        configured = str(value or Path.home() / "QGISBoProjektstartCache")
+        return self._expand_env_placeholders(configured)
+
+
     def _server_catalog_path(self) -> Optional[Path]:
         if self.active_server_catalog_path and self.active_server_catalog_path.exists():
             return self.active_server_catalog_path
@@ -559,7 +585,7 @@ class BoProjektstartPlugin:
     def reload_server_settings(self) -> None:
         self.server_settings = self._load_server_settings()
         self.server_catalog_candidates = [Path(p) for p in self.server_settings.get("server_catalog_candidates", [])]
-        self.default_cache_dir = str(
+        self.default_cache_dir = self._resolve_cache_dir(
             self.server_settings.get("default_cache_dir", str(Path.home() / "QGISBoProjektstartCache"))
         )
         self.active_server_catalog_path = None
@@ -1154,7 +1180,8 @@ class BoProjektstartPlugin:
 
     def export_offline_package(self) -> None:
         cache_dir = self.settings.get("cache_dir", "") or self.default_cache_dir
-        target = Path(cache_dir)
+        
+        target = Path(self._resolve_cache_dir(cache_dir))
         target.mkdir(parents=True, exist_ok=True)
 
         copied = 0
