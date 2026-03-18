@@ -5,6 +5,7 @@ from __future__ import annotations
 import configparser
 import base64
 import json
+import ntpath
 import os
 import re
 import shutil
@@ -548,6 +549,24 @@ class BoProjektstartPlugin:
         configured = str(value or Path.home() / "QGISBoProjektstartCache")
         return self._expand_env_placeholders(configured)
 
+    def _is_absolute_catalog_path(self, raw_path: str) -> bool:
+        path_value = str(raw_path).strip()
+        if not path_value:
+            return False
+        return Path(path_value).is_absolute() or ntpath.isabs(path_value)
+
+    def _join_catalog_path(self, base_path: str, relative_path: str) -> str:
+        base_value = str(base_path).strip()
+        relative_value = str(relative_path).strip()
+        if not base_value:
+            return relative_value
+        if not relative_value or self._is_absolute_catalog_path(relative_value):
+            return relative_value
+
+        if ntpath.isabs(base_value) or "\\" in base_value:
+            return ntpath.normpath(ntpath.join(base_value, relative_value))
+        return str(Path(base_value) / relative_value)
+
     def _has_catalog_source_config(self, payload: Dict) -> bool:
         return isinstance(payload.get("server_catalog_candidates"), list) or isinstance(payload.get("catalog_sources"), list)
 
@@ -816,7 +835,11 @@ class BoProjektstartPlugin:
         if cached_path and cached_path.exists():
             return cached_path
 
-        candidate_paths = [Path(candidate) for candidate in candidates if str(candidate).strip()]
+        candidate_paths = [
+            Path(self._expand_env_placeholders(str(candidate).strip()))
+            for candidate in candidates
+            if str(candidate).strip()
+        ]
         for candidate in candidate_paths:
             if candidate.exists():
                 self.active_server_catalog_paths[source_id] = candidate
@@ -997,20 +1020,18 @@ class BoProjektstartPlugin:
         if not raw_path:
             return None
 
-        layout_path = Path(raw_path)
-        if layout_path.is_absolute():
-            return layout_path
+        if self._is_absolute_catalog_path(raw_path):
+            return Path(raw_path)
 
         catalog_root = str(layout.get("__catalog_root", "")).strip()
-        server_root = Path(catalog_root) if catalog_root else None
-        if server_root:
-            return server_root / layout_path
+        if catalog_root:
+            return Path(self._join_catalog_path(catalog_root, raw_path))
 
         server_path = self._server_catalog_path()
         server_root = server_path.parent if server_path else None
         if server_root:
-            return server_root / layout_path
-        return self.plugin_dir / layout_path
+            return Path(self._join_catalog_path(str(server_root), raw_path))
+        return Path(self._join_catalog_path(str(self.plugin_dir), raw_path))
 
     def _add_layers_to_project(self, layers: List[Dict]) -> tuple[int, int]:
         project = QgsProject.instance()
@@ -1289,27 +1310,25 @@ class BoProjektstartPlugin:
         path_value = str(raw_path).strip()
         if not path_value:
             return None
-        explicit = Path(path_value)
-        if explicit.is_absolute():
-            return explicit
+        if self._is_absolute_catalog_path(path_value):
+            return Path(path_value)
         server_path = self._server_catalog_path()
         server_root = server_path.parent if server_path else None
         if server_root:
-            return server_root / explicit
-        return self.plugin_dir / explicit
+            return Path(self._join_catalog_path(str(server_root), path_value))
+        return Path(self._join_catalog_path(str(self.plugin_dir), path_value))
 
     def _resolve_catalog_relative_path_for_item(self, raw_path: str, item: Dict) -> Optional[Path]:
         path_value = str(raw_path).strip()
         if not path_value:
             return None
 
-        explicit = Path(path_value)
-        if explicit.is_absolute():
-            return explicit
+        if self._is_absolute_catalog_path(path_value):
+            return Path(path_value)
 
         catalog_root = str(item.get("__catalog_root", "")).strip()
         if catalog_root:
-            return Path(catalog_root) / explicit
+            return Path(self._join_catalog_path(catalog_root, path_value))
         return self._resolve_catalog_relative_path(path_value)
 
     def _resolve_layer_source(self, layer: Dict) -> str:
