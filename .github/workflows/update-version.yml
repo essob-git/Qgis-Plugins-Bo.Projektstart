@@ -20,7 +20,7 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      - name: Update metadata.txt
+      - name: Update bo_projektstart/metadata.txt
         run: |
           # Ersetzt die Zeile, die mit 'version=' beginnt, durch die neue Tag-Version
           sed -i "s/^version=.*/version=${{ steps.get_version.outputs.VERSION }}/" bo_projektstart/metadata.txt
