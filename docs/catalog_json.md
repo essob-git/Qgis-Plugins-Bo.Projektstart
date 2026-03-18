@@ -57,6 +57,10 @@ Optional für Styling:
 - `qml` *(String Pfad)* oder
 - `style_qml` *(String Pfad)*
 
+Optional für Offline-Export:
+
+- `allow_offline_copy` *(Boolean, Standard: `true`)* – Wenn `false`, wird der Layer beim Button **Offline-Paket erzeugen** bewusst nicht kopiert.
+
 Wenn kein `qml/style_qml` gesetzt ist, versucht das Plugin automatisch eine gleichnamige `.qml` zur Layerquelle.
 
 ## 5) Layer-Typen (`source_type`)
@@ -75,6 +79,12 @@ Wenn kein `qml/style_qml` gesetzt ist, versucht das Plugin automatisch eine glei
 ```
 
 Hinweis: `source_type` kann hier auch z. B. `geopackage` sein; geladen wird als OGR (mit Raster-Fallback).
+
+Wenn ein dateibasierter Layer **nicht** ins Offline-Paket übernommen werden darf, ergänze:
+
+```json
+"allow_offline_copy": false
+```
 
 ## 5.2 Webdienste (WMS/WFS/XYZ)
 
@@ -205,6 +215,26 @@ Empfehlungen:
 - Pfade stabil halten und mit `/` oder korrekt escaped `\` schreiben.
 - `table` exakt wie in der DB benennen (Groß-/Kleinschreibung beachten).
 - Bei Fehlern zuerst prüfen: Datei erreichbar, Tabelle vorhanden, ggf. Geometriespalte korrekt benannt.
+
+## 5.5 MBTiles
+
+MBTiles-Raster können direkt eingebunden werden. Verwende dafür `source_type: "mbtiles"` und den Dateipfad als `source`:
+
+```json
+{
+  "id": "hintergrund_mbtiles",
+  "name": "Hintergrund (MBTiles)",
+  "description": "Lokaler Raster-Kachelhintergrund",
+  "version": "1.0.0",
+  "source_type": "mbtiles",
+  "source": "W:/Karten/1234/hintergrund.mbtiles"
+}
+```
+
+Hinweise:
+
+- MBTiles wird als Raster über den GDAL-Provider geladen.
+- Für Offline-Pakete ist MBTiles dateibasiert und wird daher mitkopiert (sofern die Datei erreichbar ist).
 
 ## 5.5 Virtuelle Layer
 

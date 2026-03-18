@@ -25,10 +25,12 @@ Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart /
 - Virtuelle Layer (`source_type: "virtual"`) sind im Katalog möglich, inkl. SQL (`sql`) und Abhängigkeiten (`dependencies`)
 - PostgreSQL/PostGIS-Layer (`source_type: "postgres"`) werden unterstützt
 - SQLite/SpatiaLite-Layer (`source_type: "sqlite"` oder `"spatialite"`) werden unterstützt (auch SQLite-Tabellen ohne Geometrie)
+- MBTiles-Raster (`source_type: "mbtiles"`) werden unterstützt
 - Ohne expliziten Eintrag wird automatisch eine gleichnamige `.qml` zur Layerquelle gesucht (auch bei UNC-Pfaden)
 - Offline-Funktion:
   - Kopiert **nur dateibasierte Quellen** (z. B. SHP/GPKG) in einen Cache
   - Überspringt Webdienste (WMS/WFS/XYZ)
+- Optional kann je Layer `"allow_offline_copy": false` gesetzt werden, um das Kopieren gezielt zu verhindern
 
 ## Katalog-Update über Plugin
 
