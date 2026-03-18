@@ -25,6 +25,8 @@ from qgis.core import (
 )
 from qgis.PyQt.QtWidgets import (
     QAction,
+    QAbstractItemView,
+    QComboBox,
     QDialog,
     QFileDialog,
     QFormLayout,
@@ -53,7 +55,7 @@ class PluginDialog(QDialog):
         super().__init__(plugin.iface.mainWindow())
         self.plugin = plugin
         self.setWindowTitle(tr("Bo-Projektstart - Musterprojekt erstellen"))
-        self.resize(920, 640)
+        self.resize(1024, 640)
 
         self.tabs = QTabWidget()
         self.layer_tree = QTreeWidget()
@@ -105,12 +107,18 @@ class PluginDialog(QDialog):
         info.setWordWrap(True)
         layout.addWidget(info)
 
-        self.layer_tree.setHeaderLabels([tr("Layer"), tr("Kurzbeschreibung"), tr("Typ"), tr("Status")])
-        self.layer_tree.setSelectionMode(QTreeWidget.MultiSelection)
+        self.layer_tree.setHeaderLabels([tr("Layer"), tr("Kurzbeschreibung"), tr("Typ"), tr("Status"), tr("Visualisierung")])
+        self.layer_tree.setSelectionMode(QAbstractItemView.NoSelection)
+        self.layer_tree.setStyleSheet(
+            "QTreeWidget::item:selected { background: transparent; color: inherit; }"
+            "QTreeWidget::item:hover { background: rgba(31, 78, 121, 0.10); }"
+        )
+
         self.layer_tree.setColumnWidth(0, 260)
-        self.layer_tree.setColumnWidth(1, 360)
-        self.layer_tree.setColumnWidth(2, 120)
-        self.layer_tree.setColumnWidth(3, 140)
+        self.layer_tree.setColumnWidth(1, 340)
+        self.layer_tree.setColumnWidth(2, 90)
+        self.layer_tree.setColumnWidth(3, 90)
+        self.layer_tree.setColumnWidth(4, 180)
         layout.addWidget(self.layer_tree)
 
         return page
@@ -126,7 +134,11 @@ class PluginDialog(QDialog):
         layout.addWidget(info)
 
         self.layout_tree.setHeaderLabels([tr("Layout"), tr("Beschreibung")])
-        self.layout_tree.setSelectionMode(QTreeWidget.MultiSelection)
+        self.layout_tree.setSelectionMode(QAbstractItemView.NoSelection)
+        self.layout_tree.setStyleSheet(
+            "QTreeWidget::item:selected { background: transparent; color: inherit; }"
+            "QTreeWidget::item:hover { background: rgba(31, 78, 121, 0.10); }"
+        )
         self.layout_tree.setColumnWidth(0, 260)
         self.layout_tree.setColumnWidth(1, 360)
         layout.addWidget(self.layout_tree)
@@ -226,7 +238,7 @@ class PluginDialog(QDialog):
         outdated_keys = self.plugin.outdated_layer_keys
 
         for category in self.plugin.catalog.get("layer_categories", []):
-            category_item = QTreeWidgetItem([category.get("name", ""), "", "", ""])
+            category_item = QTreeWidgetItem([category.get("name", ""), "", "", "", ""])
             category_item.setFlags(category_item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
             category_font = QFont(category_item.font(0))
             category_font.setBold(True)
@@ -236,7 +248,7 @@ class PluginDialog(QDialog):
             self.layer_tree.addTopLevelItem(category_item)
 
             for subgroup in category.get("groups", []):
-                group_item = QTreeWidgetItem([subgroup.get("name", ""), "", "", ""])
+                group_item = QTreeWidgetItem([subgroup.get("name", ""), "", "", "", ""])
                 group_item.setFlags(group_item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
                 category_item.addChild(group_item)
 
@@ -244,18 +256,33 @@ class PluginDialog(QDialog):
                     layer_key = self.plugin.layer_key(layer)
                     is_outdated = layer_key in outdated_keys
                     status = tr("⚠ Server neuer") if is_outdated else tr("Aktuell")
-                    layer_item = QTreeWidgetItem(
-                        [layer.get("name", ""), layer.get("description", ""), layer.get("source_type", ""), status]
-                    )
+                    layer_item = QTreeWidgetItem([
+                        layer.get("name", ""),
+                        layer.get("description", ""),
+                        layer.get("source_type", ""),
+                        status,
+                        "",
+                    ])
                     layer_payload = dict(layer)
                     layer_payload["__group_name"] = subgroup.get("name", "")
                     layer_item.setData(0, Qt.UserRole, layer_payload)
                     layer_item.setFlags(layer_item.flags() | Qt.ItemIsUserCheckable)
                     layer_item.setCheckState(0, Qt.Unchecked)
+
+                    source_type = str(layer.get("source_type", "")).lower()
+                    style_combo: Optional[QComboBox] = None
+                    if source_type != "wms":
+                        style_combo = QComboBox(self.layer_tree)
+                        style_combo.addItem(tr("standard"), "__standard__")
+                        for style_option in self.plugin.collect_qml_style_options(layer):
+                            style_combo.addItem(style_option["label"], style_option["qml"])
+
                     if is_outdated:
-                        for col in range(4):
+                        for col in range(5):
                             layer_item.setForeground(col, QColor("#b00020"))
                     group_item.addChild(layer_item)
+                    if style_combo is not None:
+                        self.layer_tree.setItemWidget(layer_item, 4, style_combo)
 
         self.layer_tree.expandAll()
 
@@ -303,7 +330,11 @@ class PluginDialog(QDialog):
                 child = item.child(idx)
                 data = child.data(0, Qt.UserRole)
                 if data and child.checkState(0) == Qt.Checked:
-                    layers.append(data)
+                    layer_payload = dict(data)
+                    style_widget = self.layer_tree.itemWidget(child, 4)
+                    if isinstance(style_widget, QComboBox):
+                        layer_payload["__selected_qml"] = str(style_widget.currentData() or "__standard__")
+                    layers.append(layer_payload)
                 walk(child)
 
         for i in range(self.layer_tree.topLevelItemCount()):
@@ -1022,22 +1053,38 @@ class BoProjektstartPlugin:
         return QgsVectorLayer(definition.toString(), layer.get("name", "Virtueller Layer"), "virtual")
 
     def _apply_qml_style(self, qgs_layer, layer: Dict) -> None:
-        qml_path = self._resolve_qml_path(layer)
+        qml_path = self._resolve_selected_qml_path(layer)
         if qml_path and qml_path.exists():
             qgs_layer.loadNamedStyle(str(qml_path))
             qgs_layer.triggerRepaint()
 
+    def collect_qml_style_options(self, layer: Dict) -> List[Dict[str, str]]:
+        options: List[Dict[str, str]] = []
+        raw_styles = layer.get("qml_styles", []) or []
+        for idx, raw in enumerate(raw_styles):
+            if isinstance(raw, str) and raw.strip():
+                options.append({"label": Path(raw.strip()).stem or f"Style {idx + 1}", "qml": raw.strip()})
+                continue
+
+            if not isinstance(raw, dict):
+                continue
+            qml_path = str(raw.get("qml") or raw.get("style_qml") or "").strip()
+            if not qml_path:
+                continue
+            label = str(raw.get("label") or raw.get("name") or Path(qml_path).stem or f"Style {idx + 1}")
+            options.append({"label": label, "qml": qml_path})
+        return options
+
+    def _resolve_selected_qml_path(self, layer: Dict) -> Optional[Path]:
+        selected_qml = str(layer.get("__selected_qml", "__standard__")).strip()
+        if selected_qml and selected_qml != "__standard__":
+            return self._resolve_catalog_relative_path(selected_qml)
+        return self._resolve_qml_path(layer)
+
     def _resolve_qml_path(self, layer: Dict) -> Optional[Path]:
         explicit_qml = layer.get("qml") or layer.get("style_qml")
         if explicit_qml:
-            explicit = Path(str(explicit_qml))
-            if explicit.is_absolute():
-                return explicit
-            server_path = self._server_catalog_path()
-            server_root = server_path.parent if server_path else None
-            if server_root:
-                return server_root / explicit
-            return self.plugin_dir / explicit
+            return self._resolve_catalog_relative_path(str(explicit_qml))
 
         source = str(layer.get("source", ""))
         if not source or "://" in source:
@@ -1047,6 +1094,19 @@ class BoProjektstartPlugin:
         if source_path.suffix:
             return source_path.with_suffix(".qml")
         return Path(f"{source}.qml")
+
+    def _resolve_catalog_relative_path(self, raw_path: str) -> Optional[Path]:
+        path_value = str(raw_path).strip()
+        if not path_value:
+            return None
+        explicit = Path(path_value)
+        if explicit.is_absolute():
+            return explicit
+        server_path = self._server_catalog_path()
+        server_root = server_path.parent if server_path else None
+        if server_root:
+            return server_root / explicit
+        return self.plugin_dir / explicit
 
     def _publish_user_variables(self) -> None:
         project = QgsProject.instance()
