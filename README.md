@@ -2,7 +2,7 @@
 
 Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart / Musterprojekt-Erstellung**.
 
-## Umgesetzte Basisfunktionen
+## Überblick
 
 ### Kategorien
 
@@ -59,12 +59,24 @@ Damit kann eine einfache Admin-Verwaltung ohne separates Admin-Plugin erfolgen: 
 
 ## Installation in QGIS
 
+### Plugin installieren
+
+#### Manuell
+
 1. Repository nach `<QGIS-Profil>/python/plugins/` kopieren.
 2. Ordnername: `bo_projektstart`.
 3. QGIS neu starten.
 4. Plugin in **Erweiterungen** aktivieren.
 5. Menüeintrag **Bo-Projektstart** öffnen.
 
+#### Über QGIS
+
+1. Zip Datei herunterladen
+2. Zip Datei unter der QGIS Erweiterungsverwaltung als manuelles Plugin installieren
+
+### Einrichtung
+
+Die Settings.json Datei im Plugin einlesen. 
 ## Virtuelle Layer im Katalog
 
 - `source_type: "virtual"` aktiviert die Erstellung als virtueller Layer.
