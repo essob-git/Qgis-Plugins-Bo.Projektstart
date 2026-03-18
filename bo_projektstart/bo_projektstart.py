@@ -55,7 +55,7 @@ class PluginDialog(QDialog):
         super().__init__(plugin.iface.mainWindow())
         self.plugin = plugin
         self.setWindowTitle(tr("Bo-Projektstart - Musterprojekt erstellen"))
-        self.resize(920, 640)
+        self.resize(1024, 640)
 
         self.tabs = QTabWidget()
         self.layer_tree = QTreeWidget()
@@ -116,8 +116,8 @@ class PluginDialog(QDialog):
 
         self.layer_tree.setColumnWidth(0, 260)
         self.layer_tree.setColumnWidth(1, 360)
-        self.layer_tree.setColumnWidth(2, 120)
-        self.layer_tree.setColumnWidth(3, 140)
+        self.layer_tree.setColumnWidth(2, 100)
+        self.layer_tree.setColumnWidth(3, 100)
         self.layer_tree.setColumnWidth(4, 180)
         layout.addWidget(self.layer_tree)
 
@@ -1107,7 +1107,7 @@ class BoProjektstartPlugin:
         if server_root:
             return server_root / explicit
         return self.plugin_dir / explicit
-        
+
     def _publish_user_variables(self) -> None:
         project = QgsProject.instance()
         variables = {
