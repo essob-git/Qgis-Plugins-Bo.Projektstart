@@ -1,7 +1,3 @@
 {
-  "server_catalog_candidates": [
-    "W:/Karten/1234/catalog.json",
-    "\\\\vfgis\\Karten\\1234\\catalog.json"
-  ],
-  "default_cache_dir": "C:/Temp/QGISBoProjektstartCache"
+
 }
