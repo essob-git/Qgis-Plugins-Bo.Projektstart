@@ -9,7 +9,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from qgis.PyQt.QtCore import QCoreApplication, Qt
 from qgis.PyQt.QtXml import QDomDocument
@@ -421,11 +421,8 @@ class BoProjektstartPlugin:
         self.catalog: Dict = {}
         self.server_catalog: Dict = {}
         self.outdated_layer_keys: Set[str] = set()
-        self.server_catalog_candidates: List[Path] = [
-            Path("W:/Karten/1234/catalog.json"),
-            Path(r"\\vfgis\Karten\1234\catalog.json"),
-        ]
-        self.active_server_catalog_path: Optional[Path] = None
+        self.catalog_sources: List[Dict] = []
+        self.active_catalog_source_paths: Dict[str, Path] = {}
 
         self.settings_path = self.plugin_dir / "settings.json"
         self.user_profile_path = self.plugin_dir / "user_profile.json"
@@ -435,7 +432,7 @@ class BoProjektstartPlugin:
         self._migrate_legacy_settings()
         self.settings = self._read_json(self.user_profile_path) or {}
         self.server_settings = self._load_server_settings()
-        self.server_catalog_candidates = [Path(p) for p in self.server_settings.get("server_catalog_candidates", [])]
+        self.catalog_sources = self._catalog_source_definitions_from_settings(self.server_settings)
         
         self.default_cache_dir = self._resolve_cache_dir(
             self.server_settings.get("default_cache_dir", str(Path.home() / "QGISBoProjektstartCache"))
@@ -480,7 +477,7 @@ class BoProjektstartPlugin:
             return None
 
         decoded = self._decode_settings_payload(raw_content)
-        if decoded and isinstance(decoded.get("server_catalog_candidates"), list):
+        if decoded and self._settings_payload_has_catalog_sources(decoded):
             return decoded
         return None
 
@@ -492,7 +489,7 @@ class BoProjektstartPlugin:
             plain = None
 
         if isinstance(plain, dict):
-            if isinstance(plain.get("server_catalog_candidates"), list):
+            if self._settings_payload_has_catalog_sources(plain):
                 return plain
 
             encrypted_blob = plain.get("encrypted_settings")
@@ -548,24 +545,105 @@ class BoProjektstartPlugin:
         return self._expand_env_placeholders(configured)
 
 
-    def _server_catalog_path(self) -> Optional[Path]:
-        if self.active_server_catalog_path and self.active_server_catalog_path.exists():
-            return self.active_server_catalog_path
+    def _settings_payload_has_catalog_sources(self, payload: Dict) -> bool:
+        return isinstance(payload.get("server_catalog_candidates"), list) or isinstance(payload.get("catalog_sources"), list)
 
-        for candidate in self.server_catalog_candidates:
+    def _default_catalog_source_candidates(self) -> List[str]:
+        return [
+            "W:/Karten/1234/catalog.json",
+            r"\\vfgis\Karten\1234\catalog.json",
+        ]
+
+    def _default_catalog_source_entry(self) -> Dict:
+        return {
+            "id": "global",
+            "name": "Global",
+            "catalog_candidates": self._default_catalog_source_candidates(),
+            "enabled": True,
+        }
+
+    def _normalize_catalog_source_entry(self, raw_entry: object, index: int) -> Optional[Dict]:
+        if isinstance(raw_entry, str) and raw_entry.strip():
+            candidates = [raw_entry.strip()]
+            return {
+                "id": f"catalog_{index + 1}",
+                "name": f"Katalog {index + 1}",
+                "catalog_candidates": candidates,
+                "enabled": True,
+            }
+
+        if not isinstance(raw_entry, dict):
+            return None
+
+        raw_candidates = raw_entry.get("catalog_candidates")
+        if raw_candidates is None:
+            raw_candidates = raw_entry.get("server_catalog_candidates")
+        if raw_candidates is None and raw_entry.get("path"):
+            raw_candidates = [raw_entry.get("path")]
+
+        candidates = [
+            str(candidate).strip()
+            for candidate in (raw_candidates or [])
+            if str(candidate).strip()
+        ]
+        if not candidates:
+            return None
+
+        source_id = str(raw_entry.get("id") or raw_entry.get("key") or f"catalog_{index + 1}").strip()
+        return {
+            "id": source_id or f"catalog_{index + 1}",
+            "name": str(raw_entry.get("name") or raw_entry.get("label") or source_id or f"Katalog {index + 1}"),
+            "catalog_candidates": candidates,
+            "enabled": bool(raw_entry.get("enabled", True)),
+        }
+
+    def _catalog_source_definitions_from_settings(self, settings: Dict) -> List[Dict]:
+        raw_sources = settings.get("catalog_sources")
+        if not isinstance(raw_sources, list) or not raw_sources:
+            raw_sources = [
+                {
+                    "id": "global",
+                    "name": "Global",
+                    "catalog_candidates": settings.get("server_catalog_candidates", self._default_catalog_source_candidates()),
+                    "enabled": True,
+                }
+            ]
+
+        normalized: List[Dict] = []
+        for index, raw_source in enumerate(raw_sources):
+            entry = self._normalize_catalog_source_entry(raw_source, index)
+            if entry:
+                normalized.append(entry)
+
+        return normalized or [self._default_catalog_source_entry()]
+
+    def _catalog_source_path(self, source_entry: Dict) -> Optional[Path]:
+        source_id = str(source_entry.get("id", "")).strip()
+        active_path = self.active_catalog_source_paths.get(source_id)
+        if active_path and active_path.exists():
+            return active_path
+
+        candidates = [Path(path) for path in source_entry.get("catalog_candidates", [])]
+        for candidate in candidates:
             if candidate.exists():
-                self.active_server_catalog_path = candidate
+                self.active_catalog_source_paths[source_id] = candidate
                 return candidate
 
-        # Fallback to first configured path (e.g. before network mount is available)
-        return self.server_catalog_candidates[0] if self.server_catalog_candidates else None
+        return candidates[0] if candidates else None
+
+    def _first_catalog_source_path(self) -> Optional[Path]:
+        for source_entry in self.catalog_sources:
+            if not source_entry.get("enabled", True):
+                continue
+            source_path = self._catalog_source_path(source_entry)
+            if source_path:
+                return source_path
+        return None
 
     def _default_server_settings(self) -> Dict:
         return {
-            "server_catalog_candidates": [
-                "W:/Karten/1234/catalog.json",
-                r"\\vfgis\Karten\1234\catalog.json",
-            ],
+            "server_catalog_candidates": self._default_catalog_source_candidates(),
+            "catalog_sources": [self._default_catalog_source_entry()],
             "default_cache_dir": str(Path.home() / "QGISBoProjektstartCache"),
         }
 
@@ -579,16 +657,17 @@ class BoProjektstartPlugin:
         defaults = self._default_server_settings()
         defaults.update(cfg)
         if not isinstance(defaults.get("server_catalog_candidates"), list):
-            defaults["server_catalog_candidates"] = self._default_server_settings()["server_catalog_candidates"]
+            defaults["server_catalog_candidates"] = self._default_catalog_source_candidates()
+        defaults["catalog_sources"] = self._catalog_source_definitions_from_settings(defaults)
         return defaults
 
     def reload_server_settings(self) -> None:
         self.server_settings = self._load_server_settings()
-        self.server_catalog_candidates = [Path(p) for p in self.server_settings.get("server_catalog_candidates", [])]
+        self.catalog_sources = self._catalog_source_definitions_from_settings(self.server_settings)
         self.default_cache_dir = self._resolve_cache_dir(
             self.server_settings.get("default_cache_dir", str(Path.home() / "QGISBoProjektstartCache"))
         )
-        self.active_server_catalog_path = None
+        self.active_catalog_source_paths = {}
 
     def _migrate_legacy_settings(self) -> None:
         legacy_settings = self._read_json(self.settings_path) if self.settings_path.exists() else None
@@ -677,11 +756,11 @@ class BoProjektstartPlugin:
         for layout in payload.get("layouts", []) or []:
             if not isinstance(layout, dict):
                 continue
-            normalized_layouts.append({
-                "name": str(layout.get("name", "Layout")),
-                "description": str(layout.get("description", "")),
-                "path": str(layout.get("path", "")),
-            })
+            layout_payload = dict(layout)
+            layout_payload["name"] = str(layout.get("name", "Layout"))
+            layout_payload["description"] = str(layout.get("description", ""))
+            layout_payload["path"] = str(layout.get("path", ""))
+            normalized_layouts.append(layout_payload)
 
         return {
             "version": str(payload.get("version", "1.0.0")),
@@ -700,10 +779,102 @@ class BoProjektstartPlugin:
         self.catalog = self._normalize_catalog(self._read_json(self.local_catalog_path) or self._default_catalog_payload())
         self.catalog["_source"] = str(self.local_catalog_path)
 
-        server_path = self._server_catalog_path()
-        raw_server = self._read_json(server_path) if server_path and server_path.exists() else None
-        self.server_catalog = self._normalize_catalog(raw_server) if raw_server else {}
+        self.server_catalog = self._load_server_catalog()
         self.outdated_layer_keys = self._collect_outdated_layer_keys(self.catalog, self.server_catalog)
+
+    def _catalogs_with_sources(self) -> List[Tuple[Dict, Optional[Path], Dict]]:
+        catalogs: List[Tuple[Dict, Optional[Path], Dict]] = []
+        for source_entry in self.catalog_sources:
+            if not source_entry.get("enabled", True):
+                continue
+            source_path = self._catalog_source_path(source_entry)
+            if not source_path or not source_path.exists():
+                continue
+            raw_catalog = self._read_json(source_path)
+            if raw_catalog is None:
+                continue
+            catalogs.append((self._normalize_catalog(raw_catalog), source_path, source_entry))
+        return catalogs
+
+    def _catalog_version_key(self, version: str) -> Tuple[int, ...]:
+        numbers = [int(part) for part in re.findall(r"\d+", str(version))]
+        return tuple(numbers) if numbers else (0,)
+
+    def _merge_catalog_payloads(self, catalogs: List[Tuple[Dict, Optional[Path], Dict]]) -> Dict:
+        merged_categories: List[Dict] = []
+        category_index: Dict[str, Dict] = {}
+        category_group_index: Dict[str, Dict[str, Dict]] = {}
+        category_group_layer_index: Dict[str, Dict[str, Dict[str, int]]] = {}
+        merged_layouts: List[Dict] = []
+        layout_index: Dict[str, int] = {}
+        highest_version = "0"
+
+        for catalog, source_path, source_entry in catalogs:
+            if self._catalog_version_key(catalog.get("version", "0")) > self._catalog_version_key(highest_version):
+                highest_version = str(catalog.get("version", "0"))
+
+            source_marker = str(source_path) if source_path else ""
+            source_id = str(source_entry.get("id", "")).strip()
+
+            for category in catalog.get("layer_categories", []):
+                category_name = str(category.get("name", "Kategorie"))
+                if category_name not in category_index:
+                    category_payload = {"name": category_name, "groups": []}
+                    category_index[category_name] = category_payload
+                    category_group_index[category_name] = {}
+                    category_group_layer_index[category_name] = {}
+                    merged_categories.append(category_payload)
+
+                merged_category = category_index[category_name]
+                group_index = category_group_index[category_name]
+                group_layer_index = category_group_layer_index[category_name]
+
+                for group in category.get("groups", []):
+                    group_name = str(group.get("name", "Gruppe"))
+                    if group_name not in group_index:
+                        group_payload = {"name": group_name, "layers": []}
+                        group_index[group_name] = group_payload
+                        group_layer_index[group_name] = {}
+                        merged_category["groups"].append(group_payload)
+
+                    merged_group = group_index[group_name]
+                    layer_index = group_layer_index[group_name]
+
+                    for layer in group.get("layers", []):
+                        layer_payload = dict(layer)
+                        layer_payload["__catalog_source"] = source_marker
+                        layer_payload["__catalog_source_id"] = source_id
+                        layer_key = self.layer_key(layer_payload)
+
+                        if layer_key and layer_key in layer_index:
+                            merged_group["layers"][layer_index[layer_key]] = layer_payload
+                            continue
+
+                        merged_group["layers"].append(layer_payload)
+                        if layer_key:
+                            layer_index[layer_key] = len(merged_group["layers"]) - 1
+
+            for layout in catalog.get("layouts", []):
+                layout_payload = dict(layout)
+                layout_payload["__catalog_source"] = source_marker
+                layout_payload["__catalog_source_id"] = source_id
+                layout_key = str(layout_payload.get("name", "")).strip() or str(layout_payload.get("path", "")).strip()
+                if layout_key and layout_key in layout_index:
+                    merged_layouts[layout_index[layout_key]] = layout_payload
+                else:
+                    merged_layouts.append(layout_payload)
+                    if layout_key:
+                        layout_index[layout_key] = len(merged_layouts) - 1
+
+        return {
+            "version": highest_version,
+            "layer_categories": merged_categories,
+            "layouts": merged_layouts,
+        }
+
+    def _load_server_catalog(self) -> Dict:
+        catalogs = self._catalogs_with_sources()
+        return self._merge_catalog_payloads(catalogs) if catalogs else {}
 
     def save_settings(self) -> None:
         self._write_json(self.user_profile_path, self.settings)
@@ -737,13 +908,12 @@ class BoProjektstartPlugin:
         return outdated
 
     def update_local_catalog_from_server(self) -> bool:
-        server_path = self._server_catalog_path()
-        if not server_path or not server_path.exists():
+        catalogs = self._catalogs_with_sources()
+        if not catalogs:
             QMessageBox.warning(self.iface.mainWindow(), tr("Katalog-Update"), tr("Katalogdatei am Server nicht gefunden."))
             return False
 
-        raw_server_catalog = self._read_json(server_path)
-        server_catalog = self._normalize_catalog(raw_server_catalog)
+        server_catalog = self._merge_catalog_payloads(catalogs)
         if not server_catalog.get("layer_categories") and not server_catalog.get("layouts"):
             QMessageBox.warning(self.iface.mainWindow(), tr("Katalog-Update"), tr("Server-Katalog ist leer oder ungültig."))
             return False
@@ -842,8 +1012,7 @@ class BoProjektstartPlugin:
         if layout_path.is_absolute():
             return layout_path
 
-        server_path = self._server_catalog_path()
-        server_root = server_path.parent if server_path else None
+        server_root = self._catalog_root_for_item(layout)
         if server_root:
             return server_root / layout_path
         return self.plugin_dir / layout_path
@@ -910,7 +1079,7 @@ class BoProjektstartPlugin:
         group.addLayer(qgs_layer)
 
     def _create_non_virtual_layer(self, layer: Dict):
-        source = layer.get("source", "")
+        source = self._resolve_layer_source_value(layer)
         source_type = str(layer.get("source_type", "")).lower()
         name = layer.get("name", "Layer")
 
@@ -933,7 +1102,7 @@ class BoProjektstartPlugin:
 
     def _create_sqlite_layer(self, layer: Dict):
         name = layer.get("name", "Layer")
-        source = str(layer.get("source", "")).strip()
+        source = self._resolve_layer_source_value(layer)
         table = str(layer.get("table", "")).strip()
         geometry_column = str(layer.get("geometry_column", "")).strip()
         key_column = str(layer.get("key_column", "")).strip()
@@ -1104,15 +1273,15 @@ class BoProjektstartPlugin:
     def _resolve_selected_qml_path(self, layer: Dict) -> Optional[Path]:
         selected_qml = str(layer.get("__selected_qml", "__standard__")).strip()
         if selected_qml and selected_qml != "__standard__":
-            return self._resolve_catalog_relative_path(selected_qml)
+            return self._resolve_catalog_relative_path(selected_qml, layer)
         return self._resolve_qml_path(layer)
 
     def _resolve_qml_path(self, layer: Dict) -> Optional[Path]:
         explicit_qml = layer.get("qml") or layer.get("style_qml")
         if explicit_qml:
-            return self._resolve_catalog_relative_path(str(explicit_qml))
+            return self._resolve_catalog_relative_path(str(explicit_qml), layer)
 
-        source = str(layer.get("source", ""))
+        source = self._resolve_layer_source_value(layer)
         if not source or "://" in source:
             return None
 
@@ -1121,18 +1290,41 @@ class BoProjektstartPlugin:
             return source_path.with_suffix(".qml")
         return Path(f"{source}.qml")
 
-    def _resolve_catalog_relative_path(self, raw_path: str) -> Optional[Path]:
+    def _catalog_root_for_item(self, item: Optional[Dict] = None) -> Optional[Path]:
+        if isinstance(item, dict):
+            source_marker = str(item.get("__catalog_source", "")).strip()
+            if source_marker:
+                return Path(source_marker).parent
+
+            source_id = str(item.get("__catalog_source_id", "")).strip()
+            if source_id:
+                for source_entry in self.catalog_sources:
+                    if str(source_entry.get("id", "")).strip() != source_id:
+                        continue
+                    source_path = self._catalog_source_path(source_entry)
+                    return source_path.parent if source_path else None
+
+        first_path = self._first_catalog_source_path()
+        return first_path.parent if first_path else None
+
+    def _resolve_catalog_relative_path(self, raw_path: str, item: Optional[Dict] = None) -> Optional[Path]:
         path_value = str(raw_path).strip()
         if not path_value:
             return None
         explicit = Path(path_value)
         if explicit.is_absolute():
             return explicit
-        server_path = self._server_catalog_path()
-        server_root = server_path.parent if server_path else None
+        server_root = self._catalog_root_for_item(item)
         if server_root:
             return server_root / explicit
         return self.plugin_dir / explicit
+
+    def _resolve_layer_source_value(self, layer: Dict) -> str:
+        source = str(layer.get("source", "")).strip()
+        if not source or "://" in source:
+            return source
+        resolved = self._resolve_catalog_relative_path(source, layer)
+        return str(resolved) if resolved else source
 
     def _publish_user_variables(self) -> None:
         project = QgsProject.instance()
@@ -1148,12 +1340,11 @@ class BoProjektstartPlugin:
         project.setCustomVariables(custom)
 
     def check_for_updates(self) -> None:
-        server_path = self._server_catalog_path()
-        if not server_path or not server_path.exists():
+        server_catalog = self._load_server_catalog()
+        if not server_catalog:
             QMessageBox.warning(self.iface.mainWindow(), tr("Updateprüfung"), tr("Katalogdatei am Server nicht gefunden."))
             return
 
-        server_catalog = self._normalize_catalog(self._read_json(server_path))
         local_catalog = self._normalize_catalog(self._read_json(self.local_catalog_path))
 
         server_version = str(server_catalog.get("version", "0"))
@@ -1173,10 +1364,13 @@ class BoProjektstartPlugin:
         else:
             QMessageBox.information(self.iface.mainWindow(), tr("Updateprüfung"), tr("Keine neuere Version gefunden."))
 
-    def _source_to_path(self, source: str) -> Optional[Path]:
+    def _source_to_path(self, source: str, item: Optional[Dict] = None) -> Optional[Path]:
         if not source or "://" in source:
             return None
-        return Path(source)
+        explicit = Path(source)
+        if explicit.is_absolute():
+            return explicit
+        return self._resolve_catalog_relative_path(source, item)
 
     def export_offline_package(self) -> None:
         cache_dir = self.settings.get("cache_dir", "") or self.default_cache_dir
@@ -1195,7 +1389,7 @@ class BoProjektstartPlugin:
                     if layer.get("source_type") in {"wms", "wfs", "xyz"}:
                         skipped += 1
                         continue
-                    source = self._source_to_path(str(layer.get("source", "")))
+                    source = self._source_to_path(str(layer.get("source", "")), layer)
                     if not source or not source.exists():
                         skipped += 1
                         continue

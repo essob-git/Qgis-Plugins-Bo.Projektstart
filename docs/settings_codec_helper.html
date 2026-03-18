@@ -32,7 +32,7 @@
   <div class="grid">
     <div>
       <h3>Input</h3>
-      <textarea id="input" spellcheck="false" placeholder='{"server_catalog_candidates":["W:/Karten/1234/catalog.json"],"default_cache_dir":"C:/Temp/Cache"}'></textarea>
+      <textarea id="input" spellcheck="false" placeholder='{"catalog_sources":[{"id":"global","name":"Global","catalog_candidates":["W:/Karten/1234/catalog.json"]},{"id":"thema_intern","name":"Intern","enabled":true,"catalog_candidates":["W:/Karten/1234/catalog_intern.json"]}],"default_cache_dir":"C:/Temp/Cache"}'></textarea>
     </div>
     <div>
       <h3>Output</h3>
@@ -85,8 +85,11 @@
         return;
       }
 
-      if (!Array.isArray(parsed.server_catalog_candidates)) {
-        alert("JSON muss mindestens 'server_catalog_candidates' als Liste enthalten.");
+      const hasLegacyCandidates = Array.isArray(parsed.server_catalog_candidates);
+      const hasCatalogSources = Array.isArray(parsed.catalog_sources);
+
+      if (!hasLegacyCandidates && !hasCatalogSources) {
+        alert("JSON muss mindestens 'server_catalog_candidates' oder 'catalog_sources' als Liste enthalten.");
         return;
       }
 

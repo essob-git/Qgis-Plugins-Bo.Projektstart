@@ -2,6 +2,50 @@
 
 Diese Datei beschreibt, wie die Katalogdatei für das Plugin **Bo-Projektstart** gepflegt werden muss.
 
+## Neu: Mehrere Katalogdateien kombinieren
+
+Das Plugin kann einen **globalen Hauptkatalog** und zusätzliche **Themenkataloge** laden. Die Auswahl,
+welche Kataloge ein Benutzer sieht, wird über die benutzerspezifische `settings.json` gesteuert.
+
+Wichtig dabei:
+
+- Jeder einzelne Katalog bleibt weiterhin ein vollständiges `catalog.json` im unten beschriebenen Format.
+- Beim Laden/Update werden alle in `settings.json` aktivierten Kataloge zusammengeführt.
+- Spezialkataloge können ganze Gruppen oder komplette zusätzliche Kategorien mitbringen.
+- Relative Pfade (`source`, `qml`, `style_qml`, Layout-`path`) werden jeweils relativ zum Ursprungs-`catalog.json` aufgelöst.
+
+### Beispiel `settings.json` mit mehreren Katalogen
+
+```json
+{
+  "catalog_sources": [
+    {
+      "id": "global",
+      "name": "Global",
+      "catalog_candidates": [
+        "W:/Karten/1234/catalog.json",
+        "\\\\vfgis\\Karten\\1234\\catalog.json"
+      ]
+    },
+    {
+      "id": "thema_intern",
+      "name": "Interne Themen",
+      "enabled": true,
+      "catalog_candidates": [
+        "W:/Karten/1234/catalog_intern.json"
+      ]
+    }
+  ],
+  "default_cache_dir": "C:/Temp/QGISBoProjektstartCache"
+}
+```
+
+Hinweise:
+
+- Für Abwärtskompatibilität funktioniert weiterhin `server_catalog_candidates`.
+- Neu empfiehlt sich jedoch `catalog_sources`, weil damit mehrere Kataloge pro Benutzer steuerbar sind.
+- `enabled: false` blendet einen Katalog für den jeweiligen Benutzer aus.
+
 ## 1) Grundstruktur
 
 ```json

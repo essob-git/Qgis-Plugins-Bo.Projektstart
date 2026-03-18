@@ -15,6 +15,7 @@ Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart /
 - JSON-basierter Layer-/Layout-Katalog (`default_catalog.json`)
 - Katalog-Reader normalisiert und validiert Katalogdaten (inkl. einfacher Rückwärtskompatibilität für ältere JSON-Strukturen)
 - Server-Settings in `settings.json` (vom Anwender separat ladbar, z. B. mit verschlüsseltem Inhalt)
+- Mehrere Server-Kataloge pro Benutzerprofil über `catalog_sources` in `settings.json` (z. B. globaler Katalog plus optionale Themenblöcke)
 - Lokale Benutzer-/Systemdaten in `user_profile.json` (z. B. Cache-Pfad und Stammdaten)
 - Lokaler Arbeitskatalog in `local_catalog.json` (wird automatisch erzeugt)
 - Stammdaten werden als Projektvariablen in QGIS hinterlegt
@@ -35,7 +36,8 @@ Dieses Repository enthält ein QGIS-Plugin-Grundgerüst für **Bo-Projektstart /
 ## Katalog-Update über Plugin
 
 - PostgreSQL/PostGIS nutzt QGIS-Authentifizierung über `authname` im Katalog (festen Authentifizierungsnamen aus **QGIS > Einstellungen > Authentifizierung**).
-- Pfade zur Server-Katalogdatei kommen aus `settings.json` und können per Upload im Plugin aktualisiert werden.
+- Pfade zu einer oder mehreren Server-Katalogdateien kommen aus `settings.json` und können per Upload im Plugin aktualisiert werden.
+- Mehrere Kataloge werden beim Update zu einem lokalen Arbeitskatalog zusammengeführt. Kategorien bleiben erhalten, Gruppen aus Spezialkatalogen werden zusätzlich eingeblendet.
 - Der Anwender kann über **"Katalog aktualisieren"** den lokalen Katalog gezielt vom Netzwerklaufwerk aktualisieren.
 - Damit bleibt der Katalog einzeln updatebar, ohne das Plugin selbst neu zu installieren.
 
@@ -53,7 +55,8 @@ Die Layer- und Layoutverwaltung ist in JSON-Dateien gehalten.
 - Ausführliche JSON-Pflegedokumentation: `docs/catalog_json.md`
 - Hilfsdatei zum Codieren/Decodieren von `settings.json`: `docs/settings_codec_helper.html`
 - Lokale aktive Kopie: `bo_projektstart/local_catalog.json`
-- Zentraler Katalogpfad ist im Plugin fest hinterlegt und unterstützt Laufwerks- und UNC-Pfade (z. B. `W:/Karten/1234/catalog.json` oder `\\vfgis\Karten\1234\catalog.json`).
+- Die Benutzersettings können weiterhin den bisherigen Eintrag `server_catalog_candidates` verwenden oder auf `catalog_sources` mit mehreren Katalogdefinitionen umgestellt werden.
+- Relative Pfade in Layern, QML-Dateien und Layouts werden gegen den Ursprungskatalog aufgelöst, damit ausgelagerte Themenkataloge eigene Dateien mitbringen können.
 
 Damit kann eine einfache Admin-Verwaltung ohne separates Admin-Plugin erfolgen: JSON-Datei pflegen, Version erhöhen, Anwender aktualisieren den Katalog im Plugin.
 
