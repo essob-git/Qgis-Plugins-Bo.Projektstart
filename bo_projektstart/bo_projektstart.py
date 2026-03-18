@@ -872,6 +872,71 @@ class BoProjektstartPlugin:
             return candidate
         return QgsRasterLayer(source, name)
 
+    def _create_sqlite_layer(self, layer: Dict):
+        name = layer.get("name", "Layer")
+        source = str(layer.get("source", "")).strip()
+        table = str(layer.get("table", "")).strip()
+        geometry_column = str(layer.get("geometry_column", "")).strip()
+        key_column = str(layer.get("key_column", "")).strip()
+        sql_filter = str(layer.get("where", "")).strip()
+        explicit_uri = str(layer.get("uri", "")).strip()
+
+        spatialite_uri = explicit_uri or self._build_sqlite_uri(source, table, geometry_column, key_column, sql_filter)
+
+        if table and not geometry_column:
+            ogr_source = f"{source}|layername={table}" if source else ""
+            if ogr_source:
+                ogr_layer = QgsVectorLayer(ogr_source, name, "ogr")
+                if ogr_layer.isValid():
+                    return ogr_layer
+
+        if spatialite_uri:
+            sqlite_layer = QgsVectorLayer(spatialite_uri, name, "spatialite")
+            if sqlite_layer.isValid():
+                return sqlite_layer
+
+        if table:
+            ogr_source = f"{source}|layername={table}" if source else ""
+            if ogr_source:
+                ogr_layer = QgsVectorLayer(ogr_source, name, "ogr")
+                if ogr_layer.isValid():
+                    return ogr_layer
+
+        if explicit_uri:
+            ogr_layer = QgsVectorLayer(explicit_uri, name, "ogr")
+            if ogr_layer.isValid():
+                return ogr_layer
+
+        if source:
+            ogr_layer = QgsVectorLayer(source, name, "ogr")
+            if ogr_layer.isValid():
+                return ogr_layer
+
+        return None
+
+    def _build_sqlite_uri(
+        self,
+        source: str,
+        table: str,
+        geometry_column: str,
+        key_column: str,
+        sql_filter: str,
+    ) -> str:
+        if not source:
+            return ""
+
+        if table:
+            parts = [f"dbname='{source}'", f'table="{table}"']
+            if geometry_column:
+                parts[-1] = f'{parts[-1]} ({geometry_column})'
+            if sql_filter:
+                parts.append(f"sql={sql_filter}")
+            if key_column:
+                parts.append(f"key='{key_column}'")
+            return " ".join(parts)
+
+        return f"dbname='{source}'"
+
     def _build_postgres_uri(self, layer: Dict) -> str:
         host = str(layer.get("host", ""))
         port = str(layer.get("port", "5432"))
