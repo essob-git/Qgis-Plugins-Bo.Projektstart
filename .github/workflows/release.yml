@@ -17,9 +17,7 @@ jobs:
       # 1. Plugin als ZIP packen (ohne den ganzen Rest)
       - name: Zip Plugin
         run: |
-          cd bo_projektstart
-          zip -r ../bo_projektstart.zip bo_projektstart/
-          cd ..
+          zip -r bo_projektstart.zip bo_projektstart/
 
       # 2. Dokumentation separat packen
       - name: Zip Documentation
