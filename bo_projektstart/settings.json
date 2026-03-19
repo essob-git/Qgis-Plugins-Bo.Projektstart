@@ -1,3 +1,18 @@
 {
-
+  "server_catalog_candidates": [
+    "W:/Karten/1234/catalog.json",
+    "\\\\vfgis\\Karten\\1234\\catalog.json"
+  ],
+  "catalog_sources": [
+    {
+      "id": "global",
+      "name": "Global",
+      "catalog_candidates": [
+        "W:/Karten/1234/catalog.json",
+        "\\\\vfgis\\Karten\\1234\\catalog.json"
+      ],
+      "enabled": true
+    }
+  ],
+  "default_cache_dir": "~/QGISBoProjektstartCache"
 }
