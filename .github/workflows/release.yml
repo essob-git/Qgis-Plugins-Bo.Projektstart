@@ -17,8 +17,8 @@ jobs:
       # 1. Plugin als ZIP packen (ohne den ganzen Rest)
       - name: Zip Plugin
         run: |
-          cd Bo_Projektstart
-          zip -r ../Bo_Projektstart.zip .
+          cd bo_projektstart
+          zip -r ../bo_projektstart.zip .
           cd ..
 
       # 2. Dokumentation separat packen
@@ -31,12 +31,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Bo_Projektstart.zip
+            bo_projektstart.zip
             documentation.zip
           name: Release ${{ github.ref_name }}
           body: |
             Automatisierter Release für Version ${{ github.ref_name }}.
-            - `Bo_Projektstart.zip`: Nur das Plugin-Verzeichnis.
+            - `bo_projektstart.zip`: Nur das Plugin-Verzeichnis.
             - `documentation.zip`: Dokumentation und Readme.
           draft: false
           prerelease: false
