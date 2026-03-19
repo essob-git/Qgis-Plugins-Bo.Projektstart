@@ -1,31 +1,45 @@
-name: Create Release Assets
+name: Update Metadata & Create Release
 
 on:
   push:
     tags:
-      - 'v*' # Startet, wenn ein Tag v0.1.1 etc. gepusht wird
+      - 'v*'
 
 jobs:
-  build-release:
+  build-and-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: main # Wir checken main aus, um dort die Version zu pushen
+          fetch-depth: 0
 
-      # 1. Plugin als ZIP packen (ohne den ganzen Rest)
+      - name: Update Metadata Version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          # Update die Datei lokal
+          sed -i "s/^version=.*/version=${VERSION#v}/" bo_projektstart/metadata.txt
+          echo "CLEAN_VERSION=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Commit and Push to Main
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add bo_projektstart/metadata.txt
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: update version to ${{ steps.get_version.outputs.CLEAN_VERSION }} [skip ci]" && git push origin main)
+
+      # WICHTIG: Jetzt bauen wir die ZIPs MIT der aktualisierten Datei
       - name: Zip Plugin
-        run: |
-          zip -r bo_projektstart.zip bo_projektstart/
+        run: zip -r bo_projektstart.zip bo_projektstart/
 
-      # 2. Dokumentation separat packen
       - name: Zip Documentation
-        run: |
-          zip -r documentation.zip docs/ README.md
+        run: zip -r documentation.zip docs/ README.md
 
-      # 3. Den offiziellen GitHub Release erstellen und Dateien hochladen
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -34,7 +48,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: |
             Automatisierter Release für Version ${{ github.ref_name }}.
-            - `bo_projektstart.zip`: Nur das Plugin-Verzeichnis.
+            - `bo_projektstart.zip`: Plugin-Verzeichnis (v${{ steps.get_version.outputs.CLEAN_VERSION }}).
             - `documentation.zip`: Dokumentation und Readme.
           draft: false
           prerelease: false
