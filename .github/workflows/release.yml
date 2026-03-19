@@ -1,12 +1,11 @@
-name: Update Metadata & Create Release
+name: Update Metadata & Create Release Assets
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published] # Startet erst, wenn der Release veröffentlicht wird
 
 jobs:
-  build-and-release:
+  build-and-update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -14,14 +13,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: main # Wir checken main aus, um dort die Version zu pushen
+          ref: main # Wir arbeiten auf dem Main, um die Version dort zu speichern
           fetch-depth: 0
 
       - name: Update Metadata Version
         id: get_version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          # Update die Datei lokal
+          # Nutzt den Tag-Namen des Releases (z.B. v1.2.3)
+          VERSION=${{ github.event.release.tag_name }}
+          # Schreibt die Version (ohne v) in die metadata.txt
           sed -i "s/^version=.*/version=${VERSION#v}/" bo_projektstart/metadata.txt
           echo "CLEAN_VERSION=${VERSION#v}" >> $GITHUB_OUTPUT
 
@@ -30,25 +30,18 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add bo_projektstart/metadata.txt
+          # Nur committen, wenn sich etwas geändert hat
           git diff --quiet && git diff --staged --quiet || (git commit -m "chore: update version to ${{ steps.get_version.outputs.CLEAN_VERSION }} [skip ci]" && git push origin main)
 
-      # WICHTIG: Jetzt bauen wir die ZIPs MIT der aktualisierten Datei
-      - name: Zip Plugin
-        run: zip -r bo_projektstart.zip bo_projektstart/
+      - name: Zip Assets
+        run: |
+          zip -r bo_projektstart.zip bo_projektstart/
+          zip -r documentation.zip docs/ README.md
 
-      - name: Zip Documentation
-        run: zip -r documentation.zip docs/ README.md
-
-      - name: Create GitHub Release
+      - name: Upload Assets to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             bo_projektstart.zip
             documentation.zip
-          name: Release ${{ github.ref_name }}
-          body: |
-            Automatisierter Release für Version ${{ github.ref_name }}.
-            - `bo_projektstart.zip`: Plugin-Verzeichnis (v${{ steps.get_version.outputs.CLEAN_VERSION }}).
-            - `documentation.zip`: Dokumentation und Readme.
-          draft: false
-          prerelease: false
+          # Da der Release schon existiert (Trigger!), werden die Dateien einfach angehängt
