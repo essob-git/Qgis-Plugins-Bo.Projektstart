@@ -35,13 +35,17 @@ jobs:
 
       - name: Zip Assets
         run: |
-          zip -r bo_projektstart.zip bo_projektstart/
-          zip -r documentation.zip docs/ README.md
+          # Variable aus dem vorherigen Step holen
+          VERSION=${{ github.event.release.tag_name }}
+          
+          # Zippen mit Versionsindex im Namen
+          zip -r "bo_projektstart_${VERSION}.zip" bo_projektstart/
+          zip -r "documentation_${VERSION}.zip" docs/ README.md
 
       - name: Upload Assets to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bo_projektstart.zip
-            documentation.zip
+            bo_projektstart_${{ github.event.release.tag_name }}.zip
+            documentation_${{ github.event.release.tag_name }}.zip
           # Da der Release schon existiert (Trigger!), werden die Dateien einfach angehängt
