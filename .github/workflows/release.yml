@@ -24,7 +24,7 @@ jobs:
       # 2. Dokumentation separat packen
       - name: Zip Documentation
         run: |
-          zip -r documentation.zip doc/ README.md
+          zip -r documentation.zip docs/ README.md
 
       # 3. Den offiziellen GitHub Release erstellen und Dateien hochladen
       - name: Create Release
